@@ -32,16 +32,14 @@ struct Content {
     pub size: i32,
 }
 
-pub fn get_versions() {
-
-}
+pub fn get_versions() {}
 
 #[cfg(test)]
 pub mod tests {
     use reqwest::blocking::get;
     use serde_xml_rs::from_str;
 
-    use crate::online::{GO_HISTORY_VERSION, GO_VERSION_MATCHER, ListBucket};
+    use crate::online::{ListBucket, GO_HISTORY_VERSION, GO_VERSION_MATCHER};
 
     #[test]
     fn parse_version() {
