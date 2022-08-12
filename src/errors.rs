@@ -30,7 +30,7 @@ impl From<serde_xml_rs::Error> for Error {
     fn from(x: serde_xml_rs::Error) -> Self {
         Self {
             kind: Reason::InvalidXml,
-            msg: ,
+            msg: x.to_string(),
         }
     }
 }
