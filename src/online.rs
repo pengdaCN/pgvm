@@ -1,6 +1,11 @@
 use regex::Regex;
+use reqwest::blocking::get;
 use serde::Deserialize;
+use serde_xml_rs::from_str;
 use static_init::dynamic;
+
+use crate::data::Version;
+use crate::errors::Result;
 
 // 下载地址链接
 const GO_DOWNLOAD_LINK: &str = r#"https://storage.googleapis.com/golang"#;
@@ -10,8 +15,10 @@ const GO_HISTORY_VERSION: &str = r#"https://storage.googleapis.com/golang/?prefi
 // 匹配go版本正则
 const GO_VERSION_MATCH: &str = r#"go(\d+)(?:\.(\d+))?(?:\.(\d+))?(\w+)?\.(\w+)-(\w+)\.([\w|\.]+)"#;
 
-// 允许下载的包格式
+// 能下载的包格式
 const ALLOW_PACKAGE_SUFFIX: &[&str] = &["tar.gz", "zip"];
+// 能够作为校验文件的后缀
+const ALLOW_PACKAGE_CHECK_SUFFIX: &str = "sha256";
 
 #[dynamic]
 static GO_VERSION_MATCHER: Regex = Regex::new(GO_VERSION_MATCH).unwrap();
@@ -32,7 +39,17 @@ struct Content {
     pub size: i32,
 }
 
-pub fn get_versions() {}
+pub fn get_versions() -> Result<Vec<Version>> {
+    Ok()
+}
+
+fn get_list_bucket_result(url: &str) -> Result<ListBucket> {
+    let text = get(url)?.text()?;
+
+    let x: ListBucket = from_str(&text)?;
+
+    Ok(x)
+}
 
 #[cfg(test)]
 pub mod tests {

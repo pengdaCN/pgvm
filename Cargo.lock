@@ -602,6 +602,7 @@ dependencies = [
  "serde",
  "serde-xml-rs",
  "static_init",
+ "thiserror",
 ]
 
 [[package]]

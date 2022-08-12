@@ -9,6 +9,7 @@ edition = "2021"
 regex = "1.6.0"
 static_init = "1.0.2"
 serde-xml-rs = "0.5.1"
+thiserror = "1.0.32"
 [dependencies.serde]
 version = "1.0.143"
 features = [
