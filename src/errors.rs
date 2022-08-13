@@ -15,6 +15,8 @@ pub enum Reason {
     InvalidXml,
     #[error("网络链接错误")]
     ConnectionFailed,
+    #[error("打开数据库失败")]
+    OpenDatabaseFailed,
 }
 
 impl From<reqwest::Error> for Error {
@@ -30,6 +32,15 @@ impl From<serde_xml_rs::Error> for Error {
     fn from(x: serde_xml_rs::Error) -> Self {
         Self {
             kind: Reason::InvalidXml,
+            msg: x.to_string(),
+        }
+    }
+}
+
+impl From<sled::Error> for Error {
+    fn from(x: sled::Error) -> Self {
+        Self {
+            kind: Reason::OpenDatabaseFailed,
             msg: x.to_string(),
         }
     }

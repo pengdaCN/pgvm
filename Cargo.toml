@@ -10,6 +10,9 @@ regex = "1.6.0"
 static_init = "1.0.2"
 serde-xml-rs = "0.5.1"
 thiserror = "1.0.32"
+config = "0.13.2"
+dirs = "4.0.0"
+sled = "0.34.7"
 [dependencies.serde]
 version = "1.0.143"
 features = [

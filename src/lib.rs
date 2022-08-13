@@ -1,4 +1,4 @@
-pub mod config;
+pub(crate) mod config;
 pub mod data;
 pub mod errors;
 pub mod online;

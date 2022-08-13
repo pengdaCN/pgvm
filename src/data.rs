@@ -1,5 +1,8 @@
+use crate::errors::{Error, Reason, Result};
+use sled::Db as Database;
 use std::cmp::Ordering;
 use std::fmt::{Debug, Display, Formatter};
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Ord, Eq)]
 pub struct Version {
@@ -114,6 +117,22 @@ impl PartialOrd for UnstableVersion {
                 UnstableVersion::Beta(o) => x.cmp(o).into(),
             },
         }
+    }
+}
+
+pub struct Db {
+    db: Database,
+}
+
+impl Db {
+    pub fn new(path: impl AsRef<Path>) -> Result<Self> {
+        let db = sled::open(path)?;
+
+        Ok(Self { db })
+    }
+
+    pub fn store(&self, vers: Vec<Version>) -> Result<()> {
+        Ok(())
     }
 }
 
