@@ -1,10 +1,11 @@
 use crate::errors::{Error, Reason, Result};
+use serde::{Deserialize, Serialize};
 use sled::Db as Database;
 use std::cmp::Ordering;
 use std::fmt::{Debug, Display, Formatter};
 use std::path::{Path, PathBuf};
 
-#[derive(Debug, Ord, Eq)]
+#[derive(Debug, Ord, Eq, Deserialize, Serialize)]
 pub struct Version {
     pub name: String,
     pub arch: String,
@@ -74,7 +75,7 @@ impl PartialOrd for Version {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Ord, Eq)]
+#[derive(Debug, PartialEq, Clone, Ord, Eq, Deserialize, Serialize)]
 pub enum UnstableVersion {
     RC(i32),
     Beta(i32),
