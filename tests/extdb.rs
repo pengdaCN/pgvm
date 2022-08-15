@@ -1,7 +1,6 @@
 use pgvm::data::UnstableVersion::RC;
 use pgvm::data::Version;
 use pgvm::db::ExtKv;
-use crate::db::ExtKv;
 
 #[test]
 fn store() {
@@ -20,7 +19,7 @@ fn store() {
 
     db.store("s2", &x).unwrap();
 
-    let v1: Version = db.load("s1").unwrap().unwrap();
+    let v1: Version = db.load("s2").unwrap().unwrap();
 
     println!("{v1:?}")
 }

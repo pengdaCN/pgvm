@@ -1,9 +1,9 @@
-use crate::errors::{Error, Reason, Result};
+use crate::errors::Result;
 use serde::{Deserialize, Serialize};
 use sled::Db as Database;
 use std::cmp::Ordering;
 use std::fmt::{Debug, Display, Formatter};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 #[derive(Debug, Ord, Eq, Deserialize, Serialize)]
 pub struct Version {
