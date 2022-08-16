@@ -1,11 +1,14 @@
+use std::io::{BufReader, Read};
+use std::ops::Not;
+
 use regex::Regex;
-use reqwest::blocking::get;
+use reqwest::blocking::{get, Response};
 use serde::Deserialize;
 use serde_xml_rs::from_str;
 use static_init::dynamic;
 
 use crate::data::{UnstableVersion, Version};
-use crate::errors::Result;
+use crate::errors::{Error, Reason, Result};
 
 // 下载地址链接
 const GO_DOWNLOAD_LINK: &str = r#"https://storage.googleapis.com/golang"#;
@@ -42,6 +45,27 @@ struct Content {
     pub key: String,
     #[serde(rename = "Size")]
     pub size: i32,
+}
+
+pub fn open_version(v: &Version) -> Result<Box<dyn Read>> {
+    let resp = get(vec![GO_DOWNLOAD_LINK, &v.to_string()].join("/"))?;
+    if resp.status().is_success().not() {
+        return Err(Error {
+            kind: Reason::ConnectionFailed,
+            msg: String::from("invalid http status code"),
+        });
+    }
+
+    if let Some(x) = resp.content_length() {
+        if x < (40 << (10 * 2)) {
+            return Err(Error {
+                kind: Reason::InvalidResource,
+                msg: String::from("go package too "),
+            });
+        }
+    }
+
+    Ok(Box::new(resp))
 }
 
 pub fn get_versions() -> Result<Vec<Version>> {

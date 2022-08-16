@@ -17,6 +17,8 @@ pub enum Reason {
     ConnectionFailed,
     #[error("打开数据库失败")]
     OpenDatabaseFailed,
+    #[error("无效的资源")]
+    InvalidResource,
 }
 
 impl From<reqwest::Error> for Error {
