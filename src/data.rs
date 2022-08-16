@@ -199,6 +199,8 @@ impl Db {
             }
         });
 
+        short_version.reverse();
+
         (os, arch, short_version)
     }
 }

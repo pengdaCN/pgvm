@@ -1,5 +1,6 @@
 use pgvm::data::UnstableVersion::RC;
-use pgvm::data::Version;
+use pgvm::data::{Db, Version};
+use pgvm::online::get_versions;
 
 #[test]
 fn show_version() {
@@ -16,4 +17,15 @@ fn show_version() {
     };
     println!("{}", x);
     println!("{}", x.short_version())
+}
+
+#[test]
+fn store() {
+    let db = Db::new("./versions").unwrap();
+
+    let versions = get_versions().unwrap();
+
+    db.store(versions).unwrap();
+
+    println!("OK")
 }
