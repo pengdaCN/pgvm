@@ -14,5 +14,6 @@ fn show_version() {
         size: 0,
         sha256: "".to_string(),
     };
-    println!("{}", x)
+    println!("{}", x);
+    println!("{}", x.short_version())
 }

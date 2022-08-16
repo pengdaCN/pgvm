@@ -1,9 +1,13 @@
-use crate::errors::Result;
+use std::cmp::Ordering;
+use std::collections::HashSet;
+use std::fmt::{Debug, Display, Formatter, Write};
+use std::path::Path;
+
 use serde::{Deserialize, Serialize};
 use sled::Db as Database;
-use std::cmp::Ordering;
-use std::fmt::{Debug, Display, Formatter};
-use std::path::Path;
+
+use crate::db::ExtKv;
+use crate::errors::Result;
 
 #[derive(Debug, Ord, Eq, Deserialize, Serialize)]
 pub struct Version {
@@ -16,6 +20,23 @@ pub struct Version {
     pub unstable_v4: Option<UnstableVersion>,
     pub size: i32,
     pub sha256: String,
+}
+
+impl Version {
+    pub fn short_version(&self) -> String {
+        let mut s = self.v1.to_string();
+        if let Some(x) = self.v2 {
+            s.write_str(&format!(".{x}")).unwrap();
+        }
+        if let Some(x) = self.v3 {
+            s.write_str(&format!(".{x}")).unwrap();
+        }
+        if let Some(x) = self.unstable_v4.as_ref() {
+            s.write_str(&x.to_string()).unwrap();
+        }
+
+        s
+    }
 }
 
 impl Display for Version {
@@ -132,15 +153,59 @@ impl Db {
         Ok(Self { db })
     }
 
-    pub fn store(&self, vers: Vec<Version>) -> Result<()> {
+    pub fn store(&self, mut vers: Vec<Version>) -> Result<()> {
+        vers.sort();
+        vers.reverse();
+
+        let (os, arch, versions) = Self::compute_meta(&vers);
+
+        self.db.drop_tree("version")?;
+        let tree = self.db.open_tree("version")?;
+
+        tree.store("meta_os", &os)?;
+        tree.store("meta_arch", &arch)?;
+        tree.store("meta_versions", &versions)?;
+
+        for x in vers.iter() {
+            tree.store(x.to_string(), x)?;
+        }
+
         Ok(())
+    }
+
+    fn compute_meta(vers: &Vec<Version>) -> (HashSet<String>, HashSet<String>, Vec<String>) {
+        let mut os = HashSet::new();
+        let mut arch = HashSet::new();
+        let mut short_version = Vec::<String>::new();
+
+        vers.iter().for_each(|x| {
+            if !os.contains(&x.os) {
+                os.insert(x.os.clone());
+            }
+
+            if !arch.contains(&x.arch) {
+                arch.insert(x.arch.clone());
+            }
+
+            match short_version.last() {
+                Some(v) => {
+                    if v.ne(&x.short_version()) {
+                        short_version.push(x.short_version());
+                    }
+                }
+                None => {
+                    short_version.push(x.short_version());
+                }
+            }
+        });
+
+        (os, arch, short_version)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::data::{UnstableVersion, Version};
-    use std::mem::transmute;
 
     #[test]
     fn ord() {
