@@ -68,6 +68,15 @@ pub fn open_version(v: &Version) -> Result<Box<dyn Read>> {
     Ok(Box::new(resp))
 }
 
+pub fn verify_version(v: &Version, r: impl Read) -> Result<()> {
+    let sha256_link = vec![GO_DOWNLOAD_LINK, &v.sha256].join("/");
+    let hash_code = get(sha256_link)?.text()?;
+
+
+
+    Ok(())
+}
+
 pub fn get_versions() -> Result<Vec<Version>> {
     let mut next = get_list_bucket_result(GO_HISTORY_VERSION)?;
     let mut data = Vec::with_capacity(next.contents.len());
