@@ -60,7 +60,7 @@ pub fn open_version(v: &Version) -> Result<Box<dyn Read>> {
         if x < (40 << (10 * 2)) {
             return Err(Error {
                 kind: Reason::InvalidResource,
-                msg: String::from("go package too "),
+                msg: String::from("go package too small"),
             });
         }
     }
