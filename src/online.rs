@@ -1,8 +1,8 @@
-use std::io::{BufReader, Read};
+use std::io::Read;
 use std::ops::Not;
 
 use regex::Regex;
-use reqwest::blocking::{get, Response};
+use reqwest::blocking::get;
 use serde::Deserialize;
 use serde_xml_rs::from_str;
 use static_init::dynamic;
