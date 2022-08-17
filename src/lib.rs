@@ -1,3 +1,4 @@
+pub mod common;
 pub(crate) mod config;
 pub mod data;
 pub mod db;

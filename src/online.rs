@@ -1,6 +1,9 @@
+use openssl::sha::Sha256;
+use std::io;
 use std::io::Read;
 use std::ops::Not;
 
+use crate::common::WriteSha256;
 use regex::Regex;
 use reqwest::blocking::get;
 use serde::Deserialize;
@@ -68,11 +71,21 @@ pub fn open_version(v: &Version) -> Result<Box<dyn Read>> {
     Ok(Box::new(resp))
 }
 
-pub fn verify_version(v: &Version, r: impl Read) -> Result<()> {
+pub fn verify_version(v: &Version, mut r: impl Read) -> Result<()> {
     let sha256_link = vec![GO_DOWNLOAD_LINK, &v.sha256].join("/");
-    let hash_code = get(sha256_link)?.text()?;
+    let origin_hash_code = get(sha256_link)?.text()?.to_lowercase();
 
+    let mut hasher = WriteSha256::new(Sha256::new());
+    io::copy(&mut r, &mut hasher).unwrap();
 
+    let hash_code = hasher.into_sha256().finish();
+    let hash_code = hex::encode(hash_code).to_lowercase();
+    if hash_code != origin_hash_code {
+        return Err(Error {
+            kind: Reason::Hashinconformity,
+            msg: String::from("sha256 hash不一致"),
+        });
+    }
 
     Ok(())
 }
@@ -109,13 +122,13 @@ fn contents_copy_version(contents: Vec<Content>, out: &mut Vec<Version>) {
         .iter()
         .filter(|x| {
             ALLOW_PACKAGE_SUFFIX
-                .into_iter()
+                .iter()
                 .any(|suffix| x.key.ends_with(suffix))
         })
         .map(|x| (&x.key, x.size, GO_VERSION_MATCHER.captures(&x.key)))
         .filter(|x| x.2.is_some())
         .map(|x| (x.0, x.1, x.2.unwrap()))
-        .map(|x| {
+        .flat_map(|x| {
             let name = x.0.clone();
             let size = x.1;
             let v1: i32 = x.2.get(1)?.as_str().parse().ok()?;
@@ -152,8 +165,6 @@ fn contents_copy_version(contents: Vec<Content>, out: &mut Vec<Version>) {
                 os,
             })
         })
-        .filter(|x| x.is_some())
-        .map(|x| x.unwrap())
         .for_each(|x| out.push(x))
 }
 
@@ -177,10 +188,8 @@ pub mod tests {
         match GO_VERSION_MATCHER.captures("go1.3.2beta2.linux-s390x.tar.gz") {
             None => {}
             Some(x) => {
-                for x in x.iter().skip(1) {
-                    if let Some(x) = x {
-                        println!("{}", x.as_str())
-                    }
+                for x in x.iter().skip(1).flatten() {
+                    println!("{}", x.as_str())
                 }
             }
         }

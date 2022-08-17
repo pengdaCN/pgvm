@@ -9,7 +9,7 @@ use sled::Db as Database;
 use crate::db::ExtKv;
 use crate::errors::Result;
 
-#[derive(Debug, Ord, Eq, Deserialize, Serialize)]
+#[derive(Debug, Eq, Deserialize, Serialize)]
 pub struct Version {
     pub name: String,
     pub arch: String,
@@ -43,10 +43,8 @@ impl Display for Version {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "go{}", self.v1)?;
 
-        for x in vec![&self.v2, &self.v3] {
-            if let Some(x) = x {
-                write!(f, ".{}", *x)?;
-            }
+        for x in vec![&self.v2, &self.v3].into_iter().flatten() {
+            write!(f, ".{}", *x)?;
         }
 
         if let Some(ref x) = self.unstable_v4 {
@@ -54,6 +52,12 @@ impl Display for Version {
         }
 
         write!(f, ".{}-{}", self.os, self.arch)
+    }
+}
+
+impl Ord for Version {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
     }
 }
 
@@ -96,10 +100,16 @@ impl PartialOrd for Version {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Ord, Eq, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Clone, Eq, Deserialize, Serialize)]
 pub enum UnstableVersion {
     RC(i32),
     Beta(i32),
+}
+
+impl Ord for UnstableVersion {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
+    }
 }
 
 impl Display for UnstableVersion {

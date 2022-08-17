@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-pub type Result<T> = ::std::result::Result<T, Error>;
+pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, Error)]
 #[error("{msg}")]
@@ -19,6 +19,8 @@ pub enum Reason {
     OpenDatabaseFailed,
     #[error("无效的资源")]
     InvalidResource,
+    #[error("hash不一致")]
+    Hashinconformity,
 }
 
 impl From<reqwest::Error> for Error {
