@@ -157,6 +157,11 @@ pub struct Db {
 }
 
 impl Db {
+    const VERSION_TREE: &'static str = "version";
+    const META_OS: &'static str = "meta_os";
+    const META_ARCH: &'static str = "meta_arch";
+    const META_VERSIONS: &'static str = "meta_versions";
+
     pub fn new(path: impl AsRef<Path>) -> Result<Self> {
         let db = sled::open(path)?;
 
@@ -169,12 +174,12 @@ impl Db {
 
         let (os, arch, versions) = Self::compute_meta(&vers);
 
-        self.db.drop_tree("version")?;
-        let tree = self.db.open_tree("version")?;
+        self.db.drop_tree(Self::VERSION_TREE)?;
+        let tree = self.db.open_tree(Self::VERSION_TREE)?;
 
-        tree.store("meta_os", &os)?;
-        tree.store("meta_arch", &arch)?;
-        tree.store("meta_versions", &versions)?;
+        tree.store(Self::META_OS, &os)?;
+        tree.store(Self::META_ARCH, &arch)?;
+        tree.store(Self::META_VERSIONS, &versions)?;
 
         for x in vers.iter() {
             tree.store(x.to_string(), x)?;
@@ -183,7 +188,11 @@ impl Db {
         Ok(())
     }
 
-    fn compute_meta(vers: &Vec<Version>) -> (HashSet<String>, HashSet<String>, Vec<String>) {
+    pub fn get_versions(&self, os: Option<&str>, arch: Option<&str>) -> Result<Vec<Version>> {
+        todo!()
+    }
+
+    fn compute_meta(vers: &[Version]) -> (HashSet<String>, HashSet<String>, Vec<String>) {
         let mut os = HashSet::new();
         let mut arch = HashSet::new();
         let mut short_version = Vec::<String>::new();

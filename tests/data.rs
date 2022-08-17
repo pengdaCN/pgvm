@@ -21,7 +21,7 @@ fn show_version() {
 
 #[test]
 fn store() {
-    let db = Db::new("./versions").unwrap();
+    let db = Db::new("/tmp/versions").unwrap();
 
     let versions = get_versions().unwrap();
 
