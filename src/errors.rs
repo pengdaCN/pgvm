@@ -1,3 +1,4 @@
+use std::io;
 use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -21,31 +22,24 @@ pub enum Reason {
     InvalidResource,
     #[error("hash不一致")]
     Hashinconformity,
+    #[error("io操作失败")]
+    IoOperationFailed,
 }
 
-impl From<reqwest::Error> for Error {
-    fn from(x: reqwest::Error) -> Self {
-        Self {
-            kind: Reason::ConnectionFailed,
-            msg: x.to_string(),
+macro_rules! impl_from_error {
+    ($from:ty, $reason:expr) => {
+        impl From<$from> for Error {
+            fn from(x: $from) -> Self {
+                Self {
+                    kind: $reason,
+                    msg: x.to_string(),
+                }
+            }
         }
-    }
+    };
 }
 
-impl From<serde_xml_rs::Error> for Error {
-    fn from(x: serde_xml_rs::Error) -> Self {
-        Self {
-            kind: Reason::InvalidXml,
-            msg: x.to_string(),
-        }
-    }
-}
-
-impl From<sled::Error> for Error {
-    fn from(x: sled::Error) -> Self {
-        Self {
-            kind: Reason::OpenDatabaseFailed,
-            msg: x.to_string(),
-        }
-    }
-}
+impl_from_error!(io::Error, Reason::IoOperationFailed);
+impl_from_error!(reqwest::Error, Reason::ConnectionFailed);
+impl_from_error!(serde_xml_rs::Error, Reason::InvalidXml);
+impl_from_error!(sled::Error, Reason::OpenDatabaseFailed);

@@ -80,7 +80,7 @@ pub fn verify_version(v: &Version, mut r: impl Read) -> Result<()> {
     let origin_hash_code = get(sha256_link)?.text()?.to_lowercase();
 
     let mut hasher = WriteSha256::new(Sha256::new());
-    io::copy(&mut r, &mut hasher).unwrap();
+    io::copy(&mut r, &mut hasher)?;
 
     let hash_code = hasher.into_sha256().finish();
     let hash_code = hex::encode(hash_code).to_lowercase();
