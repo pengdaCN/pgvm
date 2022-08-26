@@ -20,6 +20,7 @@ pub struct Version {
     pub unstable_v4: Option<UnstableVersion>,
     pub size: i32,
     pub sha256: String,
+    pub compress: Compress,
 }
 
 impl Version {
@@ -98,6 +99,12 @@ impl PartialOrd for Version {
 
         Some(Ordering::Equal)
     }
+}
+
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub enum Compress {
+    TarGz,
+    Zip,
 }
 
 #[derive(Debug, PartialEq, Clone, Eq, Deserialize, Serialize)]

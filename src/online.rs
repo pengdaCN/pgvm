@@ -10,7 +10,7 @@ use serde::Deserialize;
 use serde_xml_rs::from_str;
 use static_init::dynamic;
 
-use crate::data::{UnstableVersion, Version};
+use crate::data::{Compress, UnstableVersion, Version};
 use crate::errors::{Error, Reason, Result};
 
 // 下载地址链接
@@ -153,6 +153,18 @@ fn contents_copy_version(contents: Vec<Content>, out: &mut Vec<Version>) {
                     });
             let arch = x.2.get(5).unwrap().as_str().to_string();
             let os = x.2.get(6).unwrap().as_str().to_string();
+            let compress = {
+                const TAR_GZ: &str = ALLOW_PACKAGE_SUFFIX[0];
+                const ZIP: &str = ALLOW_PACKAGE_SUFFIX[1];
+
+                if name.contains(TAR_GZ) {
+                    Compress::TarGz
+                } else if name.contains(ZIP) {
+                    Compress::Zip
+                } else {
+                    unreachable!()
+                }
+            };
 
             Some(Version {
                 name,
@@ -164,6 +176,7 @@ fn contents_copy_version(contents: Vec<Content>, out: &mut Vec<Version>) {
                 unstable_v4: addition_v4,
                 sha256: format!("{}.{}", &x.0, ALLOW_PACKAGE_CHECK_SUFFIX),
                 os,
+                compress,
             })
         })
         .for_each(|x| out.push(x))
