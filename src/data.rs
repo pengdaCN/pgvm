@@ -192,11 +192,13 @@ impl Db {
         let tree = self.db.open_tree(Self::VERSION_TREE)?;
         let mut v: Vec<Version> = tree
             .iter()
+            // 获取数据库所有的键
             .keys()
             .flatten()
             .flat_map(|x| String::from_utf8(x.iter().copied().collect()))
+            // 查询符合条件的键
             .filter(|x| {
-                for item in &[&os, &arch] {
+                for item in [&os, &arch] {
                     if let Some(c) = *item {
                         if !x.contains(c) {
                             return false;
@@ -206,10 +208,12 @@ impl Db {
 
                 true
             })
+            // 加载满足添加的键
             .flat_map(|x| tree.load(&x))
             .flatten()
             .collect();
 
+        // 排序
         v.sort();
         v.reverse();
 

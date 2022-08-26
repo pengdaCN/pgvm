@@ -29,3 +29,12 @@ fn store() {
 
     println!("OK")
 }
+
+#[test]
+fn versions() {
+    let db = Db::new("/tmp/versions").unwrap();
+
+    for x in db.get_versions(Some("linux"), Some("amd64")).unwrap() {
+        println!("{x}")
+    }
+}
