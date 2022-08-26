@@ -51,11 +51,15 @@ struct Content {
 }
 
 pub fn open_version(v: &Version) -> Result<Box<dyn Read>> {
-    let resp = get(vec![GO_DOWNLOAD_LINK, &v.to_string()].join("/"))?;
+    let resp = get(vec![GO_DOWNLOAD_LINK, &v.name].join("/"))?;
     if resp.status().is_success().not() {
         return Err(Error {
             kind: Reason::ConnectionFailed,
-            msg: String::from("invalid http status code"),
+            msg: format!(
+                "invalid http status code: {}; url: {}",
+                resp.status(),
+                resp.url()
+            ),
         });
     }
 
