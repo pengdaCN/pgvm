@@ -15,10 +15,7 @@ macro_rules! impl_ext_kv {
                     .map(|_| ())
             }
 
-            fn load<'a, K: AsRef<[u8]>, V: DeserializeOwned>(
-                &self,
-                key: K,
-            ) -> sled::Result<Option<V>> {
+            fn load<K: AsRef<[u8]>, V: DeserializeOwned>(&self, key: K) -> sled::Result<Option<V>> {
                 let v = self.get(key)?;
 
                 Ok(v.map(|x| bincode::deserialize(x.as_ref()).unwrap()))

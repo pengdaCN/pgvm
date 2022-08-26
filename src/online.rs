@@ -111,9 +111,6 @@ pub fn get_versions() -> Result<Vec<Version>> {
         }
     }
 
-    data.sort();
-    data.reverse();
-
     Ok(data)
 }
 

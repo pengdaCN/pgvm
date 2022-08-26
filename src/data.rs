@@ -189,7 +189,31 @@ impl Db {
     }
 
     pub fn get_versions(&self, os: Option<&str>, arch: Option<&str>) -> Result<Vec<Version>> {
-        todo!()
+        let tree = self.db.open_tree(Self::VERSION_TREE)?;
+        let mut v: Vec<Version> = tree
+            .iter()
+            .keys()
+            .flatten()
+            .flat_map(|x| String::from_utf8(x.iter().copied().collect()))
+            .filter(|x| {
+                for item in &[&os, &arch] {
+                    if let Some(c) = *item {
+                        if !x.contains(c) {
+                            return false;
+                        }
+                    }
+                }
+
+                true
+            })
+            .flat_map(|x| tree.load(&x))
+            .flatten()
+            .collect();
+
+        v.sort();
+        v.reverse();
+
+        Ok(v)
     }
 
     fn compute_meta(vers: &[Version]) -> (HashSet<String>, HashSet<String>, Vec<String>) {
