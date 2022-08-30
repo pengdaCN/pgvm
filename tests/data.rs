@@ -1,5 +1,5 @@
 use pgvm::data::UnstableVersion::RC;
-use pgvm::data::{Db, Version};
+use pgvm::data::{Compress, Db, Version};
 use pgvm::online::get_versions;
 
 #[test]
@@ -14,6 +14,7 @@ fn show_version() {
         unstable_v4: Some(RC(1)),
         size: 0,
         sha256: "".to_string(),
+        compress: Compress::TarGz
     };
     println!("{}", x);
     println!("{}", x.short_version())

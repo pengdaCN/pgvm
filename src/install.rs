@@ -1,0 +1,24 @@
+use crate::errors::{Error, Reason, Result};
+use compress_tools::{uncompress_archive, Ownership};
+use std::fs::rename;
+use std::io::{Read, Seek};
+use std::path::Path;
+
+pub fn install<R: Read + Seek, D: AsRef<Path>>(r: &mut R, dest: D) -> Result<()> {
+    let path = if let Some(name) = dest.as_ref().file_name() {
+        dest.as_ref()
+            .with_file_name(&format!("{}.bak", name.to_str().unwrap()))
+    } else {
+        return Err(Error {
+            kind: Reason::InvalidInstallPath,
+            msg: String::from("无效的安装路径"),
+        });
+    };
+
+    // 解压
+    uncompress_archive(r, &path, Ownership::Preserve)?;
+    // 重命到指定位置
+    rename(&path, dest)?;
+
+    Ok(())
+}

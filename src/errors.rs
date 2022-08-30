@@ -24,6 +24,10 @@ pub enum Reason {
     Hashinconformity,
     #[error("io操作失败")]
     IoOperationFailed,
+    #[error("解压失败")]
+    UncompressFailed,
+    #[error("无效的安装路径")]
+    InvalidInstallPath,
 }
 
 macro_rules! impl_from_error {
@@ -43,3 +47,4 @@ impl_from_error!(io::Error, Reason::IoOperationFailed);
 impl_from_error!(reqwest::Error, Reason::ConnectionFailed);
 impl_from_error!(serde_xml_rs::Error, Reason::InvalidXml);
 impl_from_error!(sled::Error, Reason::OpenDatabaseFailed);
+impl_from_error!(compress_tools::Error, Reason::UncompressFailed);
