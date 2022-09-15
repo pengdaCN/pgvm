@@ -9,6 +9,11 @@ use sled::Db as Database;
 use crate::db::ExtKv;
 use crate::errors::Result;
 
+#[derive(Default, Deserialize, Serialize)]
+pub struct ProgramState {
+    pub has_versions: bool,
+}
+
 #[derive(Debug, Eq, Deserialize, Serialize)]
 pub struct Version {
     pub name: String,
@@ -168,6 +173,7 @@ impl Db {
     const META_OS: &'static str = "meta_os";
     const META_ARCH: &'static str = "meta_arch";
     const META_VERSIONS: &'static str = "meta_versions";
+    const PROGRAM_STATE: &'static str = "program_state";
 
     pub fn new(path: impl AsRef<Path>) -> Result<Self> {
         let db = sled::open(path)?;
@@ -175,11 +181,15 @@ impl Db {
         Ok(Self { db })
     }
 
+    pub fn program_state(&self) -> Result<ProgramState> {
+        Ok(self.db.load(Self::PROGRAM_STATE)?.unwrap_or_default())
+    }
+
     pub fn store(&self, mut vers: Vec<Version>) -> Result<()> {
         vers.sort();
         vers.reverse();
 
-        let (os, arch, versions) = Self::compute_meta(&vers);
+        let (os, arch, versions) = Self::calculate_meta(&vers);
 
         self.db.drop_tree(Self::VERSION_TREE)?;
         let tree = self.db.open_tree(Self::VERSION_TREE)?;
@@ -227,7 +237,7 @@ impl Db {
         Ok(v)
     }
 
-    fn compute_meta(vers: &[Version]) -> (HashSet<String>, HashSet<String>, Vec<String>) {
+    fn calculate_meta(vers: &[Version]) -> (HashSet<String>, HashSet<String>, Vec<String>) {
         let mut os = HashSet::new();
         let mut arch = HashSet::new();
         let mut short_version = Vec::<String>::new();
@@ -281,7 +291,7 @@ mod tests {
             size: 0,
             sha256: "".to_string(),
 
-            compress: Compress::TarGz
+            compress: Compress::TarGz,
         };
 
         let v2 = Version {
@@ -294,7 +304,7 @@ mod tests {
             unstable_v4: b2.clone().into(),
             size: 0,
             sha256: "".to_string(),
-            compress: Compress::TarGz
+            compress: Compress::TarGz,
         };
 
         assert_eq!(v1 > v2, true);
