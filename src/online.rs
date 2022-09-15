@@ -75,6 +75,7 @@ pub fn open_version(v: &Version) -> Result<Box<dyn Read>> {
     Ok(Box::new(resp))
 }
 
+// TODO 若获取链接为404则跳过验证，不报错
 pub fn verify_version(v: &Version, mut r: impl Read) -> Result<()> {
     let sha256_link = vec![GO_DOWNLOAD_LINK, &v.sha256].join("/");
     let origin_hash_code = get(sha256_link)?.text()?.to_lowercase();

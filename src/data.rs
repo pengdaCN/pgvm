@@ -261,7 +261,7 @@ impl Db {
 
 #[cfg(test)]
 mod tests {
-    use crate::data::{UnstableVersion, Version};
+    use crate::data::{Compress, UnstableVersion, Version};
 
     #[test]
     fn ord() {
@@ -280,6 +280,8 @@ mod tests {
             unstable_v4: None,
             size: 0,
             sha256: "".to_string(),
+
+            compress: Compress::TarGz
         };
 
         let v2 = Version {
@@ -292,6 +294,7 @@ mod tests {
             unstable_v4: b2.clone().into(),
             size: 0,
             sha256: "".to_string(),
+            compress: Compress::TarGz
         };
 
         assert_eq!(v1 > v2, true);
