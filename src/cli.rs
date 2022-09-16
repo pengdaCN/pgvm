@@ -27,7 +27,14 @@ pub enum Commands {
 }
 
 #[derive(Args, Debug)]
-pub struct List {}
+pub struct List {
+    /// go os过滤条件
+    #[clap(long, value_parser)]
+    pub os: Option<String>,
+    /// go arch过滤条件
+    #[clap(long, value_parser)]
+    pub arch: Option<String>,
+}
 
 #[derive(Args, Debug)]
 pub struct Install {

@@ -185,6 +185,12 @@ impl Db {
         Ok(self.db.load(Self::PROGRAM_STATE)?.unwrap_or_default())
     }
 
+    pub fn store_program_state(&self, data: &ProgramState) -> Result<()> {
+        self.db.store(Self::PROGRAM_STATE, data)?;
+
+        Ok(())
+    }
+
     pub fn store(&self, mut vers: Vec<Version>) -> Result<()> {
         vers.sort();
         vers.reverse();
@@ -215,6 +221,10 @@ impl Db {
             .flat_map(|x| String::from_utf8(x.iter().copied().collect()))
             // 查询符合条件的键
             .filter(|x| {
+                if !x.starts_with("go") {
+                    return false;
+                }
+
                 for item in [&os, &arch] {
                     if let Some(c) = *item {
                         if !x.contains(c) {

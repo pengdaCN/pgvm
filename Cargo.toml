@@ -20,6 +20,7 @@ compress-tools = "0.13.0"
 clap = { version = "3.2.20", features = ["derive"] }
 dialoguer = "0.10.2"
 dotenv = "0.15.0"
+pager = "0.16.0"
 [dependencies.serde]
 version = "1.0.143"
 features = [
