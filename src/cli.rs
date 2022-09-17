@@ -1,5 +1,17 @@
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand, ValueEnum};
+use static_init::dynamic;
 use std::path::PathBuf;
+
+const DATABASE_PATH_NAME: &str = "PGVM_DATABASE_PATH";
+const DOWNLOAD_PATH_NAME: &str = "PGVM_DOWNLOAD_PATH";
+const INSTALL_PATH_NAME: &str = "PGVM_INSTALL_PATH";
+
+#[dynamic]
+static DEFAULT_DATABASE_PATH: PathBuf = dirs::config_dir().unwrap().join("pgvm");
+#[dynamic]
+static DEFAULT_DOWNLOAD_PATH: PathBuf = dirs::download_dir().unwrap().join("pgvm");
+#[dynamic]
+static DEFAULT_INSTALL_PATH: PathBuf = PathBuf::from("/usr/local/share/go");
 
 /// pgvm golang 版本管理工具
 #[derive(Parser, Debug)]
@@ -9,13 +21,16 @@ pub struct Cli {
     #[clap(short, long, value_parser)]
     pub update: bool,
     /// 数据库存储位置
-    #[clap(long, value_parser)]
-    pub database_path: Option<PathBuf>,
-    #[clap(long, value_parser)]
+    #[clap(long, value_parser, env = DATABASE_PATH_NAME, default_value_os_t = DEFAULT_DATABASE_PATH.clone())]
+    pub database_path: PathBuf,
     /// 下载安装包存放位置
-    pub download_path: Option<PathBuf>,
+    #[clap(long, value_parser, env = DOWNLOAD_PATH_NAME, default_value_os_t = DEFAULT_DOWNLOAD_PATH.clone())]
+    pub download_path: PathBuf,
+    /// golang安装位置
+    #[clap(long, value_parser, env = INSTALL_PATH_NAME, default_value_os_t = DEFAULT_INSTALL_PATH.clone())]
+    pub install_path: PathBuf,
     #[clap(subcommand)]
-    pub command: Commands,
+    pub command: Option<Commands>,
 }
 
 #[derive(Subcommand, Debug)]
@@ -34,6 +49,17 @@ pub struct List {
     /// go arch过滤条件
     #[clap(long, value_parser)]
     pub arch: Option<String>,
+    /// 选择查看类型
+    #[clap(long, value_parser, value_enum, default_value_t)]
+    pub mode: ShowMode,
+}
+
+#[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Default, ValueEnum)]
+pub enum ShowMode {
+    #[default]
+    Version,
+    Os,
+    Arch,
 }
 
 #[derive(Args, Debug)]

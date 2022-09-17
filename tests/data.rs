@@ -35,7 +35,7 @@ fn store() {
 fn versions() {
     let db = Db::new("/tmp/versions").unwrap();
 
-    for x in db.get_versions(Some("linux"), Some("amd64")).unwrap() {
+    for x in db.versions(Some("linux"), Some("amd64")).unwrap() {
         println!("{x}")
     }
 }

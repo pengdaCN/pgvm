@@ -211,7 +211,39 @@ impl Db {
         Ok(())
     }
 
-    pub fn get_versions(&self, os: Option<&str>, arch: Option<&str>) -> Result<Vec<Version>> {
+    pub fn os(&self) -> Result<Vec<String>> {
+        let os: HashSet<String> = self
+            .db
+            .open_tree(Self::VERSION_TREE)?
+            .load(Self::META_OS)?
+            .unwrap_or_default();
+
+        let mut os = os.into_iter().collect::<Vec<_>>();
+        os.sort();
+
+        Ok(os)
+    }
+
+    pub fn arch(&self) -> Result<Vec<String>> {
+        let arch: HashSet<String> = self
+            .db
+            .open_tree(Self::VERSION_TREE)?
+            .load(Self::META_ARCH)?
+            .unwrap_or_default();
+
+        let mut arch = arch.into_iter().collect::<Vec<_>>();
+        arch.sort();
+
+        Ok(arch)
+    }
+
+    pub fn version(&self, ver: &str) -> Result<Option<Version>> {
+        let version: Option<Version> = self.db.open_tree(Self::VERSION_TREE)?.load(ver)?;
+
+        Ok(version)
+    }
+
+    pub fn versions(&self, os: Option<&str>, arch: Option<&str>) -> Result<Vec<Version>> {
         let tree = self.db.open_tree(Self::VERSION_TREE)?;
         let mut v: Vec<Version> = tree
             .iter()

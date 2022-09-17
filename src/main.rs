@@ -1,48 +1,32 @@
 pub(crate) mod cli;
+pub(crate) mod install;
 
-use crate::cli::{Cli, Commands, Install, List};
+use std::{fs, io};
+
+use crate::cli::{Cli, Commands, Install, List, ShowMode};
 use clap::Parser;
 use dialoguer::theme::ColorfulTheme;
 use dialoguer::Select;
-use dotenv::dotenv;
-use pgvm::data::Db;
+use pgvm::data::{Db, Version};
+use pgvm::errors::{Error, Reason, Result};
 use pgvm::online;
-use static_init::dynamic;
-use std::env;
+use std::fs::{File, OpenOptions};
 use std::path::PathBuf;
-use pager::Pager;
 
-const DATABASE_PATH_NAME: &str = "PGVM_DATABASE_PATH";
-const DOWNLOAD_PATH_NAME: &str = "PGVM_DOWNLOAD_PATH";
-
-#[dynamic]
-static DEFAULT_DATABASE_PATH: PathBuf = dirs::config_dir().unwrap().join("pgvm");
-#[dynamic]
-static DEFAULT_DOWNLOAD_PATH: PathBuf = dirs::download_dir().unwrap().join("pgvm");
+use pgvm::online::open_version;
 
 struct Environment {
     database_path: PathBuf,
     download_path: PathBuf,
+    install_path: PathBuf,
 }
 
 impl From<&Cli> for Environment {
     fn from(c: &Cli) -> Self {
-        let database_path = c.database_path.clone().unwrap_or_else(|| {
-            env::var(DATABASE_PATH_NAME)
-                .ok()
-                .map(PathBuf::from)
-                .unwrap_or_else(|| DEFAULT_DATABASE_PATH.clone())
-        });
-        let download_path = c.download_path.clone().unwrap_or_else(|| {
-            env::var(DOWNLOAD_PATH_NAME)
-                .ok()
-                .map(PathBuf::from)
-                .unwrap_or_else(|| DEFAULT_DOWNLOAD_PATH.clone())
-        });
-
         Self {
-            database_path,
-            download_path,
+            database_path: c.database_path.clone(),
+            download_path: c.download_path.clone(),
+            install_path: c.install_path.clone(),
         }
     }
 }
@@ -54,22 +38,39 @@ struct App {
 
 impl App {
     fn list(&self, opt: &List) {
-        Pager::new().setup();
+        // Pager::new().setup();
 
-        for x in self.db.get_versions(opt.os.as_deref(), opt.arch.as_deref()).expect("获取版本列表失败") {
-            println!("{x}")
+        match &opt.mode {
+            ShowMode::Version => {
+                for x in self
+                    .db
+                    .versions(opt.os.as_deref(), opt.arch.as_deref())
+                    .expect("获取版本列表失败")
+                {
+                    println!("{x}")
+                }
+            }
+            ShowMode::Os => {
+                for x in self.db.os().expect("获取os列表失败") {
+                    println!("{x}")
+                }
+            }
+            ShowMode::Arch => {
+                for x in self.db.arch().expect("获取arch列表失败") {
+                    println!("{x}")
+                }
+            }
         }
     }
 
     fn install(&self, opt: &Install) {
-        let version = opt.version.clone().unwrap_or_else(|| {
-            let mut versions: Vec<String> = self
-                .db
-                .get_versions(None, None)
-                .expect("获取版本列表失败")
-                .into_iter()
-                .map(|x| x.to_string())
-                .collect();
+        let version = if let Some(v) = &opt.version {
+            self.db
+                .version(v)
+                .expect("读取数据库失败")
+                .expect("不存在的go版本")
+        } else {
+            let mut versions = self.db.versions(None, None).expect("获取版本列表失败");
             let selections = Select::with_theme(&ColorfulTheme::default())
                 .with_prompt("选择go版本")
                 .default(0)
@@ -78,15 +79,64 @@ impl App {
                 .expect("获取版本选项失败");
 
             versions.remove(selections)
-        });
+        };
 
-        println!("选择的go版本{}", version)
+        println!("选择的go版本{}", version);
+
+        let mut f = self.open_version(&version).expect("获取go版本文件失败");
+
+        // 创建安装目录
+        let install_path = self.env.install_path.join("_pgvm_versions");
+        fs::create_dir_all(&install_path).expect("创建go安装目录失败");
+
+        // 将go文件解压进去
+        install::install(&mut f, install_path.join(&version.to_string())).expect("安装失败");
+    }
+
+    fn open_version(&self, v: &Version) -> Result<File> {
+        // 检查download_path是否存在
+        let meta = fs::metadata(&self.env.download_path).or_else(|e| {
+            if matches!(e.kind(), io::ErrorKind::NotFound) {
+                fs::create_dir_all(&self.env.download_path)?;
+
+                return fs::metadata(&self.env.download_path);
+            }
+
+            Err(e)
+        })?;
+        if !meta.is_dir() {
+            return Err(Error {
+                kind: Reason::InvalidDownloadPath,
+                msg: "无效的下载路径".to_string(),
+            });
+        }
+
+        let download_path = self.env.download_path.join(&v.name);
+        let file = OpenOptions::new()
+            .read(true)
+            .open(&download_path)
+            .or_else(|e| {
+                if matches!(e.kind(), io::ErrorKind::NotFound) {
+                    let mut f = OpenOptions::new()
+                        .write(true)
+                        .truncate(true)
+                        .create(true)
+                        .open(&download_path)?;
+
+                    let mut r = open_version(v)?;
+                    io::copy(&mut r, &mut f)?;
+
+                    return Ok::<File, Error>(f);
+                }
+
+                Err(e.into())
+            })?;
+
+        Ok(file)
     }
 }
 
 fn main() {
-    dotenv().ok();
-
     let cli: Cli = Cli::parse();
 
     let env: Environment = (&cli).into();
@@ -105,8 +155,10 @@ fn main() {
 
     let app = App { env, db };
 
-    match &cli.command {
-        Commands::List(x) => app.list(x),
-        Commands::Install(x) => app.install(x),
+    if let Some(sub) = &cli.command {
+        match sub {
+            Commands::List(x) => app.list(x),
+            Commands::Install(x) => app.install(x),
+        }
     }
 }

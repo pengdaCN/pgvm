@@ -15,7 +15,7 @@ fn versions() {
 #[test]
 fn verify() {
     let db = Db::new("/tmp/versions").unwrap();
-    let vers = db.get_versions(Some("linux"), Some("amd64")).unwrap();
+    let vers = db.versions(Some("linux"), Some("amd64")).unwrap();
     let go_latest = vers.first().unwrap();
     println!("go latest {go_latest}");
 

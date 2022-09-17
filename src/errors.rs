@@ -28,6 +28,8 @@ pub enum Reason {
     UncompressFailed,
     #[error("无效的安装路径")]
     InvalidInstallPath,
+    #[error("无效的下载路径")]
+    InvalidDownloadPath,
 }
 
 macro_rules! impl_from_error {
