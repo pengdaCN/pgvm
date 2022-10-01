@@ -119,7 +119,7 @@ impl App {
             .read(true)
             .open(&download_path)
             .and_then(|f| {
-                match online::verify_version(&v, &f) {
+                match online::verify_version(v, &f) {
                     Ok(_) => Ok::<File, io::Error>(f),
                     Err(e) => {
                         if matches!(e.kind, errors::Reason::Hashinconformity) {
