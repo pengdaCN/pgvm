@@ -7,10 +7,12 @@ use crate::cli::{Cli, Commands, Install, List, ShowMode};
 use clap::Parser;
 use dialoguer::theme::ColorfulTheme;
 use dialoguer::Select;
+use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use pgvm::data::{Db, Version};
 use pgvm::errors::{Error, Reason, Result};
 use pgvm::online;
 use std::fs::{File, OpenOptions};
+use std::io::Write;
 use std::path::PathBuf;
 
 use pgvm::online::open_version;
@@ -124,7 +126,8 @@ impl App {
                         .open(&download_path)?;
 
                     let mut r = open_version(v)?;
-                    io::copy(&mut r, &mut f)?;
+                    let mut w = Progress::wrap(&mut f, r.1 as u64);
+                    io::copy(&mut r.0, &mut w)?;
 
                     return Ok::<File, Error>(f);
                 }
@@ -160,5 +163,45 @@ fn main() {
             Commands::List(x) => app.list(x),
             Commands::Install(x) => app.install(x),
         }
+    }
+}
+
+struct Progress<W> {
+    inner: W,
+    bar: ProgressBar,
+    pos: u64,
+}
+
+impl<W: Write> Progress<W> {
+    fn wrap(w: W, total_size: u64) -> Self {
+        let pb = ProgressBar::new(total_size);
+        pb.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+            .unwrap()
+            .with_key("eta", |state: &ProgressState, w: &mut dyn std::fmt::Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap())
+            .progress_chars("#>-"));
+
+        Self {
+            inner: w,
+            bar: pb,
+            pos: 0,
+        }
+    }
+}
+
+impl<W: Write> Write for Progress<W> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        let len = self.inner.write(buf)?;
+        self.pos += len as u64;
+
+        self.bar.set_position(self.pos);
+        if self.bar.is_finished() {
+            self.bar.finish_with_message("downloaded");
+        }
+
+        Ok(len)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.inner.flush()
     }
 }

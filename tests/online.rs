@@ -27,7 +27,7 @@ fn verify() {
         .truncate(true)
         .open("/tmp/go_latest.tar.gz")
         .unwrap();
-    copy(&mut online_file, &mut local_file).unwrap();
+    copy(&mut online_file.0, &mut local_file).unwrap();
 
     local_file.seek(SeekFrom::Start(0)).unwrap();
     verify_version(go_latest, &local_file).unwrap();

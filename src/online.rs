@@ -53,7 +53,7 @@ struct Content {
     pub size: i32,
 }
 
-pub fn open_version(v: &Version) -> Result<Box<dyn Read>> {
+pub fn open_version(v: &Version) -> Result<(Box<dyn Read>, i32)> {
     let resp = ureq::get(&vec![GO_DOWNLOAD_LINK, &v.name].join("/")).call()?;
     if resp.status() != 200 {
         return Err(Error {
@@ -66,7 +66,9 @@ pub fn open_version(v: &Version) -> Result<Box<dyn Read>> {
         });
     }
 
+    let mut cl = 0;
     if let Some(x) = content_length(&resp) {
+        cl = x;
         if x < (40 << (10 * 2)) {
             return Err(Error {
                 kind: Reason::InvalidResource,
@@ -75,7 +77,7 @@ pub fn open_version(v: &Version) -> Result<Box<dyn Read>> {
         }
     }
 
-    Ok(Box::new(resp.into_reader()))
+    Ok((Box::new(resp.into_reader()), cl))
 }
 
 pub fn verify_version(v: &Version, mut r: impl Read) -> Result<()> {
@@ -205,5 +207,5 @@ fn get(url: &str) -> Result<String> {
 }
 
 fn content_length(resp: &ureq::Response) -> Option<i32> {
-    resp.header("content_length").and_then(|x| x.parse().ok())
+    resp.header("content-length").and_then(|x| x.parse().ok())
 }
