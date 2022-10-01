@@ -78,10 +78,14 @@ pub fn open_version(v: &Version) -> Result<Box<dyn Read>> {
     Ok(Box::new(resp.into_reader()))
 }
 
-// TODO 若获取链接为404则跳过验证，不报错
 pub fn verify_version(v: &Version, mut r: impl Read) -> Result<()> {
     let sha256_link = vec![GO_DOWNLOAD_LINK, &v.sha256].join("/");
-    let origin_hash_code = get(&sha256_link)?.to_lowercase();
+    let resp = ureq::get(&sha256_link).call()?;
+    if resp.status() == 404 {
+        return Ok(());
+    }
+
+    let origin_hash_code = resp.into_string()?.to_lowercase();
 
     let mut hasher = WriteSha256::new(Sha256::new());
     io::copy(&mut r, &mut hasher)?;
@@ -201,6 +205,5 @@ fn get(url: &str) -> Result<String> {
 }
 
 fn content_length(resp: &ureq::Response) -> Option<i32> {
-    resp.header("content_length")
-        .and_then(|x| x.parse().ok())
+    resp.header("content_length").and_then(|x| x.parse().ok())
 }
