@@ -10,10 +10,11 @@ use dialoguer::Select;
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use pgvm::data::{Db, Version};
 use pgvm::errors::{Error, Reason, Result};
-use pgvm::online;
+use pgvm::{errors, online};
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::PathBuf;
+use thiserror::private::PathAsDisplay;
 
 use pgvm::online::open_version;
 
@@ -117,6 +118,27 @@ impl App {
         let file = OpenOptions::new()
             .read(true)
             .open(&download_path)
+            .and_then(|f| {
+                match online::verify_version(&v, &f) {
+                    Ok(_) => Ok::<File, io::Error>(f),
+                    Err(e) => {
+                        if matches!(e.kind, errors::Reason::Hashinconformity) {
+                            // 文件不合法
+                            println!(
+                                "本地缓存文件: {} hash校验未通过",
+                                &download_path.as_display()
+                            );
+                            println!("本地缓存文件: {} 删除", &download_path.as_display());
+
+                            fs::remove_file(&download_path)?;
+
+                            return Err(io::ErrorKind::NotFound.into());
+                        }
+
+                        Ok(f)
+                    }
+                }
+            })
             .or_else(|e| {
                 if matches!(e.kind(), io::ErrorKind::NotFound) {
                     let mut f = OpenOptions::new()
