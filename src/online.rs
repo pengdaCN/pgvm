@@ -1,14 +1,13 @@
 use openssl::sha::Sha256;
 use std::io;
 use std::io::Read;
-use std::ops::Not;
 
 use crate::common::WriteSha256;
 use regex::Regex;
-use reqwest::blocking::get;
 use serde::Deserialize;
 use serde_xml_rs::from_str;
 use static_init::dynamic;
+use ureq::Agent;
 
 use crate::data::{Compress, UnstableVersion, Version};
 use crate::errors::{Error, Reason, Result};
@@ -25,6 +24,10 @@ const GO_VERSION_MATCH: &str = r#"go(\d+)(?:\.(\d+))?(?:\.(\d+))?(\w+)?\.(\w+)-(
 const ALLOW_PACKAGE_SUFFIX: &[&str] = &["tar.gz", "zip"];
 // 能够作为校验文件的后缀
 const ALLOW_PACKAGE_CHECK_SUFFIX: &str = "sha256";
+
+// http对象，使用连接复用等
+#[dynamic]
+static HTTP_AGENT: Agent = Agent::new();
 
 // go版本匹配
 #[dynamic]
@@ -51,19 +54,19 @@ struct Content {
 }
 
 pub fn open_version(v: &Version) -> Result<Box<dyn Read>> {
-    let resp = get(vec![GO_DOWNLOAD_LINK, &v.name].join("/"))?;
-    if resp.status().is_success().not() {
+    let resp = ureq::get(&vec![GO_DOWNLOAD_LINK, &v.name].join("/")).call()?;
+    if resp.status() != 200 {
         return Err(Error {
             kind: Reason::ConnectionFailed,
             msg: format!(
                 "invalid http status code: {}; url: {}",
                 resp.status(),
-                resp.url()
+                resp.get_url(),
             ),
         });
     }
 
-    if let Some(x) = resp.content_length() {
+    if let Some(x) = content_length(&resp) {
         if x < (40 << (10 * 2)) {
             return Err(Error {
                 kind: Reason::InvalidResource,
@@ -72,13 +75,13 @@ pub fn open_version(v: &Version) -> Result<Box<dyn Read>> {
         }
     }
 
-    Ok(Box::new(resp))
+    Ok(Box::new(resp.into_reader()))
 }
 
 // TODO 若获取链接为404则跳过验证，不报错
 pub fn verify_version(v: &Version, mut r: impl Read) -> Result<()> {
     let sha256_link = vec![GO_DOWNLOAD_LINK, &v.sha256].join("/");
-    let origin_hash_code = get(sha256_link)?.text()?.to_lowercase();
+    let origin_hash_code = get(&sha256_link)?.to_lowercase();
 
     let mut hasher = WriteSha256::new(Sha256::new());
     io::copy(&mut r, &mut hasher)?;
@@ -184,40 +187,20 @@ fn contents_copy_version(contents: Vec<Content>, out: &mut Vec<Version>) {
 }
 
 fn get_list_bucket_result(url: &str) -> Result<ListBucket> {
-    let text = get(url)?.text()?;
+    let text = get(url)?;
 
     let x: ListBucket = from_str(&text)?;
 
     Ok(x)
 }
 
-#[cfg(test)]
-pub mod tests {
-    use reqwest::blocking::get;
-    use serde_xml_rs::from_str;
+fn get(url: &str) -> Result<String> {
+    let text = HTTP_AGENT.get(url).call()?.into_string()?;
 
-    use crate::online::{ListBucket, GO_HISTORY_VERSION, GO_VERSION_MATCHER};
+    Ok(text)
+}
 
-    #[test]
-    fn parse_version() {
-        match GO_VERSION_MATCHER.captures("go1.3.2beta2.linux-s390x.tar.gz") {
-            None => {}
-            Some(x) => {
-                for x in x.iter().skip(1).flatten() {
-                    println!("{}", x.as_str())
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn parse_xml() {
-        let body = get(GO_HISTORY_VERSION).unwrap().text().unwrap();
-        let x: ListBucket = from_str(&body).unwrap();
-
-        println!("{:?}", x.next_marker);
-        for x in x.contents.iter() {
-            println!("{x:?}")
-        }
-    }
+fn content_length(resp: &ureq::Response) -> Option<i32> {
+    resp.header("content_length")
+        .and_then(|x| x.parse().ok())
 }
