@@ -7,13 +7,14 @@ use crate::cli::{Cli, Commands, Install, List, ShowMode};
 use clap::Parser;
 use dialoguer::theme::ColorfulTheme;
 use dialoguer::Select;
-use indicatif::{ProgressBar, ProgressState, ProgressStyle};
+use indicatif::{HumanDuration, ProgressBar, ProgressState, ProgressStyle};
 use pgvm::data::{Db, Version};
 use pgvm::errors::{Error, Reason, Result};
 use pgvm::{errors, online};
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::PathBuf;
+use std::time::{Duration, Instant};
 use thiserror::private::PathAsDisplay;
 
 use pgvm::online::open_version;
@@ -169,9 +170,21 @@ fn main() {
 
     let mut program_state = db.program_state().unwrap();
     if cli.update || !program_state.has_versions {
+        let pb = ProgressBar::new_spinner();
+        pb.enable_steady_tick(Duration::from_millis(200));
+        pb.set_style(
+            ProgressStyle::with_template("{spinner:.dim.bold} update: ...")
+                .unwrap()
+                .tick_chars("/|\\- "),
+        );
+        let started = Instant::now();
+
         // 更新version
         db.store(online::get_versions().expect("获取go version失败"))
             .expect("存储go versions失败");
+
+        pb.finish_and_clear();
+        println!("Update Done in {}", HumanDuration(started.elapsed()));
 
         program_state.has_versions = true;
         db.store_program_state(&program_state)
