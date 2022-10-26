@@ -39,6 +39,8 @@ pub enum Commands {
     List(List),
     /// 安装一个golang sdk
     Install(Install),
+    /// 切换版本
+    Switch(Switch),
 }
 
 #[derive(Args, Debug)]
@@ -65,5 +67,11 @@ pub enum ShowMode {
 #[derive(Args, Debug)]
 pub struct Install {
     #[clap(value_parser)]
+    pub version: Option<String>,
+}
+
+#[derive(Args, Debug)]
+pub struct Switch {
+    /// 切换版本
     pub version: Option<String>,
 }
